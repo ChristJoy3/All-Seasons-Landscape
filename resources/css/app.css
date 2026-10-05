@@ -1,0 +1,311 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+/*
+ * Brand palette — three hues only, derived from the current site and logo.
+ * The same values are mirrored in resources/js/config/palette.js for the 3D scene.
+ *   green  #3E993A  site's primary green / green maple leaf
+ *   gold   #E2D96B  logo oval + "All Seasons" lettering
+ *   ember  #E8742A  orange maple leaf (accent, used sparingly)
+ * Neutrals: ink (green-black) and bone (warm off-white).
+ */
+@theme {
+    --color-ink: #0a120d;
+    --color-ink-2: #101b14;
+    --color-ink-3: #17251c;
+    --color-bone: #f4f1e6;
+    --color-green: #3e993a;
+    --color-green-soft: #5fb85a;
+    --color-gold: #e2d96b;
+    --color-ember: #e8742a;
+
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+    --font-serif: var(--font-cinzel), ui-serif, Georgia, serif;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+    html {
+        background: var(--color-ink);
+        color: var(--color-bone);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    /* Lenis recommended base styles */
+    html.lenis,
+    html.lenis body {
+        height: auto;
+    }
+    .lenis.lenis-smooth {
+        scroll-behavior: auto !important;
+    }
+    .lenis.lenis-stopped {
+        overflow: clip;
+    }
+
+    body {
+        @apply bg-ink font-sans text-bone;
+        overflow-x: clip;
+    }
+
+    ::selection {
+        background: var(--color-gold);
+        color: var(--color-ink);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-gold);
+        outline-offset: 4px;
+        border-radius: 4px;
+    }
+}
+
+@layer components {
+    /* Small classical caps label, echoing the logo's serif. */
+    .eyebrow {
+        @apply inline-flex items-center gap-3 font-serif text-xs font-semibold tracking-[0.32em] text-gold uppercase;
+    }
+    .eyebrow::before {
+        content: '';
+        @apply h-px w-8 bg-current opacity-60;
+    }
+
+    .display {
+        @apply font-display leading-[0.95] font-semibold tracking-[-0.035em];
+    }
+
+    /* Frosted "glass" panel used for cards over the 3D canvas. */
+    .glass {
+        background: linear-gradient(160deg, rgb(244 241 230 / 0.07), rgb(244 241 230 / 0.02));
+        border: 1px solid rgb(244 241 230 / 0.1);
+        backdrop-filter: blur(14px) saturate(1.2);
+        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    }
+
+    .btn {
+        @apply relative inline-flex items-center gap-3 overflow-hidden rounded-full px-7 py-4 font-display text-sm font-semibold tracking-wide transition-colors duration-300;
+        will-change: transform;
+    }
+    .btn-primary {
+        @apply bg-gold text-ink hover:bg-bone;
+    }
+    .btn-ghost {
+        @apply border border-bone/20 text-bone hover:border-gold hover:text-gold;
+    }
+
+    .link-underline {
+        background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+        transition: background-size 0.5s var(--ease-out-expo);
+    }
+    .link-underline:hover {
+        background-size: 100% 1px;
+    }
+
+    /* SplitText line masks */
+    .split-line {
+        overflow: clip;
+        padding-bottom: 0.08em;
+        margin-bottom: -0.08em;
+    }
+}
+
+/* ---------- Fixed WebGL canvas ---------- */
+#webgl {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Vignette + grain over the canvas to give it a filmic finish. */
+.scene-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(120% 90% at 50% 40%, transparent 55%, rgb(10 18 13 / 0.75) 100%),
+        linear-gradient(to bottom, rgb(10 18 13 / 0.35), transparent 20%, transparent 80%, rgb(10 18 13 / 0.5));
+}
+
+/* ---------- Custom cursor (desktop / fine pointers only) ---------- */
+.cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    pointer-events: none;
+    display: none;
+    opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+    html.has-cursor .cursor {
+        display: block;
+    }
+    html.has-cursor,
+    html.has-cursor a,
+    html.has-cursor button {
+        cursor: none;
+    }
+}
+.cursor-dot,
+.cursor-ring {
+    position: absolute;
+    border-radius: 9999px;
+    transform: translate(-50%, -50%);
+}
+.cursor-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--color-gold);
+}
+.cursor-ring {
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgb(226 217 107 / 0.5);
+    transition:
+        width 0.4s var(--ease-out-expo),
+        height 0.4s var(--ease-out-expo),
+        background-color 0.4s,
+        border-color 0.4s;
+}
+.cursor.is-hover .cursor-ring {
+    width: 72px;
+    height: 72px;
+    background: rgb(226 217 107 / 0.08);
+    border-color: var(--color-gold);
+}
+.cursor-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.cursor.is-view .cursor-ring {
+    width: 88px;
+    height: 88px;
+    background: var(--color-gold);
+}
+.cursor.is-view .cursor-label {
+    opacity: 1;
+}
+
+/* ---------- Navbar ---------- */
+.site-nav {
+    transition:
+        transform 0.6s var(--ease-out-expo),
+        background-color 0.4s,
+        backdrop-filter 0.4s;
+}
+.site-nav.is-hidden {
+    transform: translateY(-110%);
+}
+.site-nav.is-scrolled {
+    background: rgb(10 18 13 / 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+/* ---------- Services: pinned (enhanced) layout ---------- */
+/* The progress HUD only makes sense in the pinned sequence. */
+.services-hud {
+    display: none;
+}
+.services-enhanced .services-hud {
+    display: flex;
+}
+.services-enhanced .services-pin {
+    height: 100svh;
+}
+.services-enhanced .services-stage {
+    display: grid;
+    gap: 3rem;
+    perspective: 1200px;
+}
+@media (min-width: 1024px) {
+    .services-enhanced .services-stage {
+        grid-template-columns: 18rem minmax(0, 1fr);
+        align-items: end;
+    }
+    .services-enhanced .services-index {
+        align-self: end;
+        padding-bottom: 0.5rem;
+    }
+}
+.services-enhanced .services-index-item {
+    padding-block: 0.3rem;
+}
+.services-enhanced .services-list {
+    position: relative;
+    height: 100%;
+    min-height: 18rem;
+}
+.services-enhanced .services-group-heading {
+    display: none;
+}
+.services-enhanced .service-item {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transform-style: preserve-3d;
+}
+.services-enhanced .service-item .service-name {
+    font-size: clamp(2.6rem, 8vw, 8.5rem);
+    transform-origin: 50% 100%;
+}
+.services-enhanced .service-item .service-num,
+.services-enhanced .service-item .service-copy {
+    display: inline-block;
+}
+.services-enhanced .service-item .service-copy {
+    display: block;
+}
+
+/* ---------- Gallery track ---------- */
+/* Each card gets its own perspective (set in gallery.js); a perspective on the very
+   wide track would skew cards far from its centre. */
+
+/* Before JS runs, hide elements that will be revealed, but only when JS + motion are allowed.
+   Opacity (not visibility) keeps links focusable and readable before their reveal plays. */
+html.js:not(.reduced-motion) [data-reveal] {
+    opacity: 0;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ---------- No-WebGL fallback backdrop ---------- */
+html.no-webgl #webgl {
+    display: none;
+}
+html.no-webgl body {
+    background:
+        radial-gradient(80% 60% at 70% 20%, rgb(62 153 58 / 0.18), transparent 70%),
+        radial-gradient(60% 50% at 10% 90%, rgb(232 116 42 / 0.12), transparent 70%),
+        var(--color-ink);
+    background-attachment: fixed;
+}
